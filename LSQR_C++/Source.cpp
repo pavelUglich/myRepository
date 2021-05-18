@@ -1,6 +1,5 @@
 #include <vector>
 #include <cstdlib>
-#include <iostream>
 #include "OdeSolver.h"
 #include "boundary_value_problem.h"
 #include "system_evaluation.h"
@@ -11,8 +10,6 @@
 #include <iomanip>
 
 #include "lsqr.h"
-#include "Stabilizer.h"
-#include "VoyevodinMethod.h"
 
 //class VoyevodinMethod;
 std::vector<std::function<double(double)>> Parameters::smooth_params;
@@ -141,49 +138,73 @@ std::vector<double> fill_up_the_vector(size_t m,
 	return result;
 }
 
+std::vector<double> fill_up_the_vector(
+	const std::function<double(double)>& lambda, 
+	const std::vector<double> & points)
+{
+	std::vector<double> result(points.size());
+	for (size_t ii = 0; ii < points.size(); ii++)
+	{
+		result[ii] = lambda(points[ii]);
+	}
+	return result;
+}
+
+
+std::vector<double> create_points_vector(size_t points_k, double min_kappa, 
+	double max_kappa)
+{
+	std::vector<double> points_kappa(points_k + 1);
+	const auto h_kappa = (max_kappa - min_kappa) / points_k;
+	for (size_t i = 0; i <= points_k; i++)
+	{
+		points_kappa[i] = min_kappa + i * h_kappa;
+	}
+	return points_kappa;
+}
+
+system_evaluation longitudinal(const std::function<double(double)>& e, const std::function<double(double)> & rho)
+{
+	const std::vector<std::function<double(double, double, const std::vector<double>&)>> longitudinal = {
+		[=](double x, double kappa, const std::vector<double>& vec) {return vec[1] / e(x); },
+		[=](double x, double kappa, const std::vector<double>& vec) {return -kappa * kappa * rho(x) * vec[0]; }
+	};
+	return  { longitudinal, { {0,0.0} }, { { 1,1.0 }} };
+}
+
+system_evaluation flexural(const std::function<double(double)>& e, const std::function<double(double)>& rho)
+{
+	const std::vector<std::function<double(double, double, const std::vector<double>&)>> flexural = {
+			[=](double x, double kappa, const std::vector<double>& vec) {return vec[1]; },
+			[=](double x, double kappa, const std::vector<double>& vec) {return vec[2] / e(x); },
+			[=](double x, double kappa, const std::vector<double>& vec) {return vec[3]; },
+			[=](double x, double kappa, const std::vector<double>& vec) {return kappa * kappa * kappa * kappa * rho(x) * vec[0]; }
+	};
+	return  { flexural, { {0,0.0}, {1,0.0} }, { {2,0.0}, { 3,1.0 }} };
+}
+
+
 int main()
 {
 	setlocale(0, "");
-	/*
-		OdeSolver cauchy_problem =
-		{
-			{
-				[](double x, const std::vector<double> & u) {return u[0]; }
-			}
-			,0.1e-8, RUNGE_KUTTA_FELDBERG
-		};
-		auto sol = cauchy_problem.solve(0, 1, { 1 });*/
-
 	Parameters::kind = FIRST;
 
-	// минимальная частота
+	const size_t points_k = 10;
 	const double min_kappa = 2.5;
 	const double max_kappa = 4.0;
+
+
+	// минимальная частота
 	const double min_gamma = 2.9;
 	const double max_gamma = 4.4;
 	// количество точек
 	const size_t points_x = 30;
-	const size_t points_k = 10;
-	const auto h_kappa = (max_kappa - min_kappa) / points_k;
-	const auto h_gamma = (max_gamma - min_gamma) / points_k;
 	// значения частоты
-	std::vector<double> points_kappa;
-	for (size_t i = 0; i <= points_k; i++)
-	{
-		points_kappa.push_back(min_kappa + i * h_kappa);
-	}
-	std::vector<double> points_gamma;
-	for (size_t i = 0; i <= points_k; i++)
-	{
-		points_gamma.push_back(min_gamma + i * h_gamma);
-	}
-	std::vector<double> vv;
 	const double h_x = 1.0 / points_x;
-	for (size_t i = 0; i <= points_x; i++)
-	{
-		vv.push_back(i * h_x);
-	}
-
+	const std::vector<double> points_kappa = create_points_vector(points_k, min_kappa, max_kappa);
+	const std::vector<double> points_gamma = create_points_vector(points_k, min_gamma, max_gamma);
+	const std::vector<double> vv = create_points_vector(points_x, 0, 1);
+	
 	// задаём параметры
 	Parameters::points = vv;
 	Parameters::piecewise_linear_params = { points_x + 1, {1.0, 1.0} };
@@ -199,35 +220,16 @@ int main()
 		//[](auto x) {return 1.0 + sin(pi * x); },
 		//[](auto x) {return 2 * x * x - 2 * x + 1; }
 	};
-
-	std::vector<double> exact_solution_mu(points_x);
-	std::vector<double> exact_solution_rho(points_x);
-	for (size_t i = 0; i < points_x; i++)
-	{
-		exact_solution_mu[i] = Parameters::smooth_params[0](vv[i]);
-		exact_solution_rho[i] = Parameters::smooth_params[1](vv[i]);
-	}
+	std::vector<double> exact_solution_mu = fill_up_the_vector(Parameters::smooth_params[0], vv);//(points_x);
+	std::vector<double> exact_solution_rho = fill_up_the_vector(Parameters::smooth_params[1], vv);
 
 	// краевые задачи
-	// системы уравнений
-	std::function<double(double)> e = [](double x) { return Parameters::evaluate(x, 0); };
-	std::function<double(double)> rho = [](double x) { return Parameters::evaluate(x, 1); };
-	const std::vector<std::function<double(double, double, const std::vector<double>&)>> longitudinal = {
-		[=](double x, double kappa, const std::vector<double>& vec) {return vec[1] / e(x); },
-		[=](double x, double kappa, const std::vector<double>& vec) {return -kappa * kappa * rho(x) * vec[0]; }
-	};
-	const system_evaluation longitidinal_evaluation = { longitudinal, 1.0, { {0,0.0} }, { { 1,1.0 }} };
-
-	const std::vector<std::function<double(double, double, const std::vector<double>&)>> flexural = {
-		[=](double x, double kappa, const std::vector<double>& vec) {return vec[1]; },
-		[=](double x, double kappa, const std::vector<double>& vec) {return vec[2] / e(x); },
-		[=](double x, double kappa, const std::vector<double>& vec) {return vec[3]; },
-		[=](double x, double kappa, const std::vector<double>& vec) {return kappa * kappa * kappa * kappa * rho(x) * vec[0]; }
-	};
-	const system_evaluation flexural_evaluation = { flexural, 1.0, { {0,0.0}, {1,0.0} }, { {2,0.0}, { 3,1.0 }} };
-
-	// 1. Создаём правую часть
-	// 1.1 Наблюдаемое поле перемещений
+	const system_evaluation longitidinal_evaluation = longitudinal(
+		[](double x) { return Parameters::evaluate(x, 0); },
+		[](double x) { return Parameters::evaluate(x, 1); });
+	const system_evaluation flexural_evaluation = flexural(
+		[](double x) { return Parameters::evaluate(x, 0); },
+		[](double x) { return Parameters::evaluate(x, 1); });
 	const auto longitudinal_observed = longitidinal_evaluation.evaluate_the_right_part(min_kappa, max_kappa, points_k, 0);
 	const auto flexural_observed = flexural_evaluation.evaluate_the_right_part(min_gamma, max_gamma, points_k, 0);
 	std::vector<double> observed(longitudinal_observed);
@@ -235,51 +237,38 @@ int main()
 
 	// 1.2 Эталонное поле перемещений
 	Parameters::kind = FIRST;
-	e = [](double x) {return -x + 2; };//lagrange({ 0.26287, 0.88830 });
-	rho = [](double x) {return -x + 2; };// lagrange({ 0.19171, 0.41566 });
-
+	auto e = [](double x) {return 2 - x; };
+	auto rho = [](double x) {return 2 - x; };
 	for (size_t i = 0; i < points_x; i++)
 	{
 		Parameters::piecewise_linear_params[i][0] = e(vv[i]);
 		Parameters::piecewise_linear_params[i][1] = rho(vv[i]);
 	}
-
-	const std::vector<std::function<double(double, double, const std::vector<double>&)>> longitudinal_et = {
-		[=](double x, double kappa, const std::vector<double>& vec) {return vec[1] / e(x); },
-		[=](double x, double kappa, const std::vector<double>& vec) {return -kappa * kappa * rho(x) * vec[0]; }
-	};
-	const system_evaluation longitidinal_system_etalon = { longitudinal_et, 1.0, { {0,0.0} }, { { 1,1.0 }} };
+	const system_evaluation longitidinal_system_etalon = longitudinal(e, rho);
 	auto longitudinal_etalon = longitidinal_system_etalon.evaluate_the_right_part(min_kappa, max_kappa, points_k, 0);
-	const std::vector<std::function<double(double, double, const std::vector<double>&)>> flexural_et = {
-		[=](double x, double kappa, const std::vector<double>& vec) {return vec[1]; },
-		[=](double x, double kappa, const std::vector<double>& vec) {return vec[2] / e(x); },
-		[=](double x, double kappa, const std::vector<double>& vec) {return vec[3]; },
-		[=](double x, double kappa, const std::vector<double>& vec) {return kappa * kappa * kappa * kappa * rho(x) * vec[0]; }
-	};
-	const system_evaluation flexural_evaluation_etalon = { flexural_et, 1.0, { {0,0.0}, {1,0.0} }, { {2,0.0}, { 3,1.0 }} };
+	const system_evaluation flexural_evaluation_etalon = flexural(e, rho);
 	auto flexural_etalon = flexural_evaluation_etalon.evaluate_the_right_part(min_gamma, max_gamma, points_k, 0);
 	std::vector<double> etalon(longitudinal_etalon);
 	etalon.insert(etalon.end(), flexural_etalon.begin(), flexural_etalon.end());
-	auto right_part = observed - etalon;
 
+	auto right_part = observed - etalon;
 
 
 	// 2. Создаём матрицу
 	// 2.1 Лямбда-выражения для создания ядер
 	// продольные колебания
 	auto mu_reconstruct_longitudinal = [=](double kappa, const std::vector<double>& v, size_t idx)
-	{return  -/*h_x */ v[1] * v[1] / Parameters::piecewise_linear_params[idx][0]
+	{return  -h_x * v[1] * v[1] / Parameters::piecewise_linear_params[idx][0]
 		/ Parameters::piecewise_linear_params[idx][0]; };
 
 	auto rho_reconstruct_longitudinal = [=](double kappa, const std::vector<double>& v, size_t idx)
-	{return  /*h_x  */ kappa * kappa * v[0] * v[0]; };
+	{return  h_x * kappa * kappa * v[0] * v[0]; };
 
-	// изгибные колебания
 	auto mu_reconstruct_flexural = [=](double kappa, const std::vector<double>& v, size_t idx)
-	{return  /*h_x */ v[2] * v[2] / Parameters::piecewise_linear_params[idx][0]
+	{return  h_x * v[2] * v[2] / Parameters::piecewise_linear_params[idx][0]
 		/ Parameters::piecewise_linear_params[idx][0]; };
 	auto rho_reconstruct_flexural = [=](double kappa, const std::vector<double>& v, size_t idx)
-	{return  -/*h_x */ kappa * kappa * kappa * kappa * v[0] * v[0]; };
+	{return  -h_x * kappa * kappa * kappa * kappa * v[0] * v[0]; };
 
 	auto matrix = longitidinal_system_etalon.evaluate_the_matrix(points_kappa, vv, mu_reconstruct_longitudinal);
 	auto flex = longitidinal_system_etalon.evaluate_the_matrix(points_kappa, vv, rho_reconstruct_longitudinal);
@@ -296,11 +285,11 @@ int main()
 
 	matrix.insert(matrix.end(), matrix_flexural.begin(), matrix_flexural.end());
 
-	//lsqr _lsqr(matrix);
-	//auto sol = _lsqr.lin_solve(right_part);
+	lsqr _lsqr(matrix);
+	auto sol = _lsqr.lin_solve(right_part);
 
-	VoyevodinMethod voyevodin_method(matrix, right_part, 1.0 / points_x, Dirichle, Dirichle, 1.0, 0.1, 1.0e-4, 0, 1.0e-8);
-	auto sol = voyevodin_method.solution();
+	//VoyevodinMethod voyevodin_method(matrix, right_part, 1.0 / points_x, Dirichle, Dirichle, 1.0, 0.1, 1.0e-4, 0, 1.0e-8);
+	//auto sol = voyevodin_method.solution();
 
 	Parameters::kind = THIRD;
 	size_t iter = 0;
@@ -338,12 +327,11 @@ int main()
 			matrix_flexural[i].insert(matrix_flexural[i].end(), flex[i].begin(), flex[i].end());
 		}
 		matrix.insert(matrix.end(), matrix_flexural.begin(), matrix_flexural.end());
-		//_lsqr = { matrix };
-		//sol = _lsqr.lin_solve(right_part);
-
+		_lsqr = { matrix };
+		sol = _lsqr.lin_solve(right_part);
 		//VoyevodinMethod
-		voyevodin_method = { matrix, right_part, 1.0 / points_x, Dirichle, Dirichle };
-		sol = voyevodin_method.solution();
+		//voyevodin_method = { matrix, right_part, 1.0 / points_x, Dirichle, Dirichle };
+		//sol = voyevodin_method.solution();
 		++iter;
 	}
 	std::vector<double> mu_reconstrucred(points_x);
@@ -353,8 +341,8 @@ int main()
 		mu_reconstrucred[i] = Parameters::piecewise_linear_params[i][0];
 		rho_reconstrucred[i] = Parameters::piecewise_linear_params[i][1];
 	}
-	plotTheWaveField({ {"black", exact_solution_mu}, {"red", mu_reconstrucred} }, "mu1.txt", h_x);
-	plotTheWaveField({ {"black", exact_solution_rho}, {"red", rho_reconstrucred} }, "rho1.txt", h_x);
+	plotTheWaveField({ {"black", exact_solution_mu}, {"red", mu_reconstrucred} }, "mu513_.txt", h_x);
+	plotTheWaveField({ {"black", exact_solution_rho}, {"red", rho_reconstrucred} }, "rho513_.txt", h_x);
 	plotTheWaveField({ {"black", residials} }, "res.txt", 1.0);
 	//*/
 	system("pause");

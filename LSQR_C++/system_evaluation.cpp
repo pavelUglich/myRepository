@@ -13,7 +13,6 @@
  */
 system_evaluation::system_evaluation(
 	std::vector<std::function<double(double, double, const std::vector<double>&)>> eqs,
-	double kappa,
 	std::map<size_t, double> left_conditions,
 	std::map<size_t, double> right_conditions, double epsilon) :
 	_equations(std::move(eqs)),

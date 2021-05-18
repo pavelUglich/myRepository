@@ -25,7 +25,6 @@ class system_evaluation
 public:
 	system_evaluation(
 		std::vector<std::function<double(double, double, const std::vector<double>&)>> eqs, 
-		double kappa,
 		std::map<size_t, double> left_conditions,
 		std::map<size_t, double> right_conditions,
 		double epsilon = 0.1e-6);
