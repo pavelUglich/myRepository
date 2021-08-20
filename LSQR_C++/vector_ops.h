@@ -24,6 +24,11 @@ std::vector<double> operator*(
 	const std::vector<std::vector<double>>& matrix,
 	const std::vector<double>& vector);
 
+std::vector<std::vector<double>> operator*(
+	const std::vector<std::vector<double>>& matrix,
+	double number);
+
+
 std::vector<double> operator*(
 	const SquareMatrix<double>& matrix,
 	const std::vector<double>& vector);

@@ -90,6 +90,21 @@ std::vector<double> operator*(const std::vector<std::vector<double>>& matrix,
 	return result;
 }
 
+std::vector<std::vector<double>> operator*(const std::vector<std::vector<double>>& matrix, double number)
+{
+	std::vector<std::vector<double>> result(matrix.size());
+	for (size_t i = 0; i < result.size(); i++)
+	{
+		std::vector<double> row(matrix[i].size());
+		for (size_t ii = 0; ii < row.size(); ii++)
+		{
+			row[i] = matrix[i][ii] * number;
+		}
+		result[i] = row;
+	}
+	return result;
+}
+
 std::vector<double> operator*(const SquareMatrix<double>& matrix, const std::vector<double>& vector)
 {
 	return matrix.getElements() * vector;

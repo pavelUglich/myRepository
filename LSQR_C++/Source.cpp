@@ -10,6 +10,7 @@
 #include <iomanip>
 
 #include "lsqr.h"
+#include "VoyevodinMethod.h"
 
 //class VoyevodinMethod;
 std::vector<std::function<double(double)>> Parameters::smooth_params;
@@ -138,6 +139,23 @@ std::vector<double> fill_up_the_vector(size_t m,
 	return result;
 }
 
+std::vector<std::vector<double>> fill_up_the_matrix(
+	const std::function<double(double, double)>& lambda,
+	const std::vector<double>& points_x, const std::vector<double>& points_kappa)
+{
+	std::vector<std::vector<double>> result(points_kappa.size());
+	for (size_t i = 0; i < points_kappa.size(); i++)
+	{
+		std::vector<double> row(points_x.size());
+		for (size_t ii = 0; ii < points_x.size(); ii++)
+		{
+			row[ii] = lambda(points_kappa[i], points_x[ii]);
+		}
+		result[i] = row;
+	}
+	return result;
+}
+
 std::vector<double> fill_up_the_vector(
 	const std::function<double(double)>& lambda, 
 	const std::vector<double> & points)
@@ -184,23 +202,26 @@ system_evaluation flexural(const std::function<double(double)>& e, const std::fu
 }
 
 
+
+
 int main()
 {
 	setlocale(0, "");
 	Parameters::kind = FIRST;
 
-	const size_t points_k = 10;
-	const double min_kappa = 2.5;
-	const double max_kappa = 4.0;
+	const size_t points_k = 20;
+	const double min_kappa = 2.4;
+	const double max_kappa = 4.2;
 
 
 	// минимальная частота
-	const double min_gamma = 2.9;
-	const double max_gamma = 4.4;
+	const double min_gamma = 2.3;
+	const double max_gamma = 4.1;
 	// количество точек
-	const size_t points_x = 30;
+	const size_t points_x = 20;
 	// значения частоты
 	const double h_x = 1.0 / points_x;
+	const double h_kappa = (max_kappa - min_kappa) / points_k;
 	const std::vector<double> points_kappa = create_points_vector(points_k, min_kappa, max_kappa);
 	const std::vector<double> points_gamma = create_points_vector(points_k, min_gamma, max_gamma);
 	const std::vector<double> vv = create_points_vector(points_x, 0, 1);
@@ -211,18 +232,36 @@ int main()
 	Parameters::const_params = { 1.0, 1.0 };
 	Parameters::smooth_params = {
 		// 1
-		//[](auto x) {return 2.0 - (x - 1) * (x - 1); },
-		//[](auto x) {return 1.0 + exp(5 * (x - 1)); }
+		[](auto x) {return 1.0 + 0.1 * x;/* 2.0 - (x - 1) * (x - 1);*/ },
+		[](auto x) {return 1.0 + 0.1 * x; /*1.0 + exp(5 * (x - 1));*/ }
 		// 2
-		[](auto x) {return 2.0 - x * x; },
-		[](auto x) {return 1.0 + exp(-4 * x + 0.02); }
+		//[](auto x) {return 2.0 - x * x; },
+		//[](auto x) {return 1.0 + exp(-4 * x + 0.02); }
 		// 3
 		//[](auto x) {return 1.0 + sin(pi * x); },
 		//[](auto x) {return 2 * x * x - 2 * x + 1; }
+
+	
 	};
+	
+	/* 20.08
 	std::vector<double> exact_solution_mu = fill_up_the_vector(Parameters::smooth_params[0], vv);//(points_x);
 	std::vector<double> exact_solution_rho = fill_up_the_vector(Parameters::smooth_params[1], vv);
 
+
+	std::vector<double> exact_solution_mu1 = fill_up_the_vector([](auto x) {return 0.1 * x;/* 2.0 - (x - 1) * (x - 1);*/ //}, vv);//(points_x);
+	//std::vector<double> exact_solution_rho1 = fill_up_the_vector([](auto x) {return 0.1 * x;/* 2.0 - (x - 1) * (x - 1);*/ }, vv);
+
+	/*
+	std::vector<double> exact_solution_mu = fill_up_the_vector([](double x) {return 1.0 + x / 10; }, vv);//(points_x);
+	std::vector<double> exact_solution_rho = fill_up_the_vector([](double x) {return 1.0 + x * x / 50; }, vv);
+
+
+	std::vector<double> exact_solution_mu1 = fill_up_the_vector([](auto x) {return 1.0 / 50 / x / x / x * (51 * x * x + 5 * x - 2) * sin(x) + (-55 * x * x + 2 * x) * cos(x) + 50 * x * x); , vv);
+	std::vector<double> exact_solution_rho1 = fill_up_the_vector([](auto x) {return 1.0 / 600 / x / x / x * (24 * x * x + 3) * cos(x) * sin(x) + 9 * x * cos(x) * cos(x) + 617 * x * x * x - 12*x); }, vv);
+	*/
+
+	/*
 	// краевые задачи
 	const system_evaluation longitidinal_evaluation = longitudinal(
 		[](double x) { return Parameters::evaluate(x, 0); },
@@ -234,12 +273,14 @@ int main()
 	const auto flexural_observed = flexural_evaluation.evaluate_the_right_part(min_gamma, max_gamma, points_k, 0);
 	std::vector<double> observed(longitudinal_observed);
 	observed.insert(observed.end(), flexural_observed.begin(), flexural_observed.end());
+	*/
 
 	// 1.2 Эталонное поле перемещений
+	/* 20.08
 	Parameters::kind = FIRST;
-	auto e = [](double x) {return 2 - x; };
-	auto rho = [](double x) {return 2 - x; };
-	for (size_t i = 0; i < points_x; i++)
+	auto e = [](double x) {return 1;/* 2 - x*/ //};
+	//auto rho = [](double x) {return 1; /* 2 - x */ //};
+	/*for (size_t i = 0; i < points_x; i++)
 	{
 		Parameters::piecewise_linear_params[i][0] = e(vv[i]);
 		Parameters::piecewise_linear_params[i][1] = rho(vv[i]);
@@ -250,25 +291,32 @@ int main()
 	auto flexural_etalon = flexural_evaluation_etalon.evaluate_the_right_part(min_gamma, max_gamma, points_k, 0);
 	std::vector<double> etalon(longitudinal_etalon);
 	etalon.insert(etalon.end(), flexural_etalon.begin(), flexural_etalon.end());
+	*/
+	auto longitudinal = fill_up_the_vector([](auto x) {return 1.0 / 50 / x / x / x * ((51 * x * x + 5 * x - 2) * sin(x) + (-55 * x * x + 2 * x) * cos(x) + 50 * x * x); }, points_kappa);
+	auto flexural_etalon = fill_up_the_vector([](auto x) {return 1.0 / 600 / x / x / x * ((24 * x * x + 3) * cos(x) * sin(x) + 9 * x * cos(x) * cos(x) + 617 * x * x * x - 12 * x); }, points_gamma);
+	std::vector<double> right_part(longitudinal);
+	right_part.insert(right_part.end(), flexural_etalon.begin(), flexural_etalon.end());
 
-	auto right_part = observed - etalon;
+
+	//auto right_part = observed - etalon;
 
 
 	// 2. Создаём матрицу
 	// 2.1 Лямбда-выражения для создания ядер
 	// продольные колебания
+/*
 	auto mu_reconstruct_longitudinal = [=](double kappa, const std::vector<double>& v, size_t idx)
-	{return  -h_x * v[1] * v[1] / Parameters::piecewise_linear_params[idx][0]
+	{return  - v[1] * v[1] / Parameters::piecewise_linear_params[idx][0]
 		/ Parameters::piecewise_linear_params[idx][0]; };
 
 	auto rho_reconstruct_longitudinal = [=](double kappa, const std::vector<double>& v, size_t idx)
-	{return  h_x * kappa * kappa * v[0] * v[0]; };
+	{return   kappa * kappa * v[0] * v[0]; };
 
 	auto mu_reconstruct_flexural = [=](double kappa, const std::vector<double>& v, size_t idx)
-	{return  h_x * v[2] * v[2] / Parameters::piecewise_linear_params[idx][0]
+	{return  v[2] * v[2] / Parameters::piecewise_linear_params[idx][0]
 		/ Parameters::piecewise_linear_params[idx][0]; };
 	auto rho_reconstruct_flexural = [=](double kappa, const std::vector<double>& v, size_t idx)
-	{return  -h_x * kappa * kappa * kappa * kappa * v[0] * v[0]; };
+	{return  - kappa * kappa * kappa * kappa * v[0] * v[0]; };
 
 	auto matrix = longitidinal_system_etalon.evaluate_the_matrix(points_kappa, vv, mu_reconstruct_longitudinal);
 	auto flex = longitidinal_system_etalon.evaluate_the_matrix(points_kappa, vv, rho_reconstruct_longitudinal);
@@ -282,16 +330,40 @@ int main()
 	{
 		matrix_flexural[i].insert(matrix_flexural[i].end(), flex[i].begin(), flex[i].end());
 	}
+	
+
+	matrix.insert(matrix.end(), matrix_flexural.begin(), matrix_flexural.end());
+	*/
+
+	auto matrix = fill_up_the_matrix([](double x, double xi) {return sin(x * xi); }, vv, points_kappa);
+	auto flex = fill_up_the_matrix([](double x, double xi) {return cos(x * xi); }, vv, points_kappa);
+	for (size_t i = 0; i <= points_k; i++)
+	{
+		matrix[i].insert(matrix[i].end(), flex[i].begin(), flex[i].end());
+	}
+	auto matrix_flexural = fill_up_the_matrix([](double x, double xi) {return cos(x * xi)* cos(x * xi); }, vv, points_gamma);
+	flex = fill_up_the_matrix([](double x, double xi) {return sin(x * xi) * sin(x * xi); }, vv, points_gamma);
+	for (size_t i = 0; i <= points_k; i++)
+	{
+		matrix_flexural[i].insert(matrix_flexural[i].end(), flex[i].begin(), flex[i].end());
+	}
+
 
 	matrix.insert(matrix.end(), matrix_flexural.begin(), matrix_flexural.end());
 
-	lsqr _lsqr(matrix);
-	auto sol = _lsqr.lin_solve(right_part);
 
-	//VoyevodinMethod voyevodin_method(matrix, right_part, 1.0 / points_x, Dirichle, Dirichle, 1.0, 0.1, 1.0e-4, 0, 1.0e-8);
-	//auto sol = voyevodin_method.solution();
+	//matrix = matrix * h_x;
+	//lsqr _lsqr(matrix);
+	//auto sol = _lsqr.lin_solve(right_part);
 
-	Parameters::kind = THIRD;
+/*	std::vector<double> exact(exact_solution_mu1);
+	exact.insert(exact.end(), exact_solution_rho1.begin(), exact_solution_rho1.end());
+	const auto right_part1 = matrix * exact;
+	*/
+	VoyevodinMethod voyevodin_method(matrix, right_part, h_x, Dirichle, Neumann, 1.0, 0.1, 1.0e-4, 0, 1.0e-3);
+	auto sol = voyevodin_method.solution();
+
+/*	Parameters::kind = THIRD;
 	size_t iter = 0;
 	std::vector<double> residials;
 	auto norm_right_part = norm(right_part);
@@ -327,11 +399,11 @@ int main()
 			matrix_flexural[i].insert(matrix_flexural[i].end(), flex[i].begin(), flex[i].end());
 		}
 		matrix.insert(matrix.end(), matrix_flexural.begin(), matrix_flexural.end());
-		_lsqr = { matrix };
-		sol = _lsqr.lin_solve(right_part);
+		//_lsqr = { matrix };
+		//sol = _lsqr.lin_solve(right_part);
 		//VoyevodinMethod
-		//voyevodin_method = { matrix, right_part, 1.0 / points_x, Dirichle, Dirichle };
-		//sol = voyevodin_method.solution();
+		voyevodin_method = { matrix, right_part, h_x, Dirichle, Neumann, 1.0, 0.1, 1.0e-4, 0, 1.0e-3 };
+		sol = voyevodin_method.solution();
 		++iter;
 	}
 	std::vector<double> mu_reconstrucred(points_x);
@@ -343,7 +415,7 @@ int main()
 	}
 	plotTheWaveField({ {"black", exact_solution_mu}, {"red", mu_reconstrucred} }, "mu513_.txt", h_x);
 	plotTheWaveField({ {"black", exact_solution_rho}, {"red", rho_reconstrucred} }, "rho513_.txt", h_x);
-	plotTheWaveField({ {"black", residials} }, "res.txt", 1.0);
-	//*/
+	plotTheWaveField({ {"black", residials} }, "res.txt", 1.0);*/
+	
 	system("pause");
 }

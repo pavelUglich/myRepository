@@ -1,10 +1,8 @@
 #pragma once
-#include <utility>
 #include<vector>
-#include<iterator>
 #include "IterativeProcess.h"
 using namespace std;
-class IterativeProcess
+class iterative_process
 {
 	vector<double> a;
 	vector<double> b;
@@ -20,18 +18,17 @@ class IterativeProcess
 	double step{}, h{}, delta{}, eps{};
 
 	void tridiag();
-	vector<double> Marching(const vector<double> & aa);
-	double Residual(double alpha_);
-	void IterationsRun();
+	vector<double> marching(const vector<double> & aa);
+	double residual(double alpha_);
+	void iterations_run();
 
 public:
-	IterativeProcess();
-	IterativeProcess(
+	iterative_process(
 		const vector<double>& p1,
 		vector<double> p2,
-		vector<double> RightPart,
-		vector<double> Qtu,
-		double Alpha,
+		vector<double> right_part,
+		vector<double> qtu,
+		double alpha,
 		double step,
 		double h,
 		double delta,
@@ -39,10 +36,6 @@ public:
 		int iterations = 50
 	);
 
-
-	~IterativeProcess();
-	vector<double> solution() const {
-		return Solution;
-	}
+	vector<double> solution() const;
 };
 
