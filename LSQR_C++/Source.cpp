@@ -190,13 +190,13 @@ int main()
 	Parameters::kind = FIRST;
 
 	const size_t points_k = 10;
-	const double min_kappa = 2.5;
-	const double max_kappa = 4.0;
+	const double min_kappa = 2.1;
+	const double max_kappa = 3.9;
 
 
 	// минимальная частота
-	const double min_gamma = 2.9;
-	const double max_gamma = 4.4;
+	const double min_gamma = 2.1;
+	const double max_gamma = 3.9;
 	// количество точек
 	const size_t points_x = 30;
 	// значения частоты
@@ -214,11 +214,11 @@ int main()
 		//[](auto x) {return 2.0 - (x - 1) * (x - 1); },
 		//[](auto x) {return 1.0 + exp(5 * (x - 1)); }
 		// 2
-		[](auto x) {return 2.0 - x * x; },
-		[](auto x) {return 1.0 + exp(-4 * x + 0.02); }
+		//[](auto x) {return 2.0 - x * x; },
+		//[](auto x) {return 1.0 + exp(-4 * x + 0.02); }
 		// 3
-		//[](auto x) {return 1.0 + sin(pi * x); },
-		//[](auto x) {return 2 * x * x - 2 * x + 1; }
+		[](auto x) {return 1.0 + sin(pi * x); },
+		[](auto x) {return 4 * x * x - 4 * x + 2; }
 	};
 	std::vector<double> exact_solution_mu = fill_up_the_vector(Parameters::smooth_params[0], vv);//(points_x);
 	std::vector<double> exact_solution_rho = fill_up_the_vector(Parameters::smooth_params[1], vv);
@@ -237,8 +237,8 @@ int main()
 
 	// 1.2 Эталонное поле перемещений
 	Parameters::kind = FIRST;
-	auto e = [](double x) {return 2 - x; };
-	auto rho = [](double x) {return 2 - x; };
+	auto e = [](double x) {return 1.5; };
+	auto rho = [](double x) {return 1.5; };
 	for (size_t i = 0; i < points_x; i++)
 	{
 		Parameters::piecewise_linear_params[i][0] = e(vv[i]);
@@ -296,7 +296,7 @@ int main()
 	std::vector<double> residials;
 	auto norm_right_part = norm(right_part);
 	residials.push_back(norm_right_part);
-	while (norm_right_part > 0.1e-4)
+	while (norm_right_part > 0.1e-2)
 	{
 		for (size_t i = 0; i <= points_x; i++)
 		{
