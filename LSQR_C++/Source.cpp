@@ -1,4 +1,4 @@
-#include <vector>
+п»ї#include <vector>
 #include <cstdlib>
 #include "OdeSolver.h"
 #include "boundary_value_problem.h"
@@ -183,6 +183,9 @@ system_evaluation flexural(const std::function<double(double)>& e, const std::fu
 	return  { flexural, { {0,0.0}, {1,0.0} }, { {2,0.0}, { 3,1.0 }} };
 }
 
+/*
+ X1 =   0.15946 | X2 =   0.78509 | X3 =   0.70452 | X4 =   0.10002 | X5 =  -0.06246 | X6 =   0.96997 | F(x) =     -0.01136
+*/
 
 int main()
 {
@@ -190,22 +193,32 @@ int main()
 	Parameters::kind = FIRST;
 
 	const size_t points_k = 10;
+	/*
 	const double min_kappa = 2.1;
 	const double max_kappa = 3.9;
 
 
-	// минимальная частота
+	// РјРёРЅРёРјР°Р»СЊРЅР°СЏ С‡Р°СЃС‚РѕС‚Р°
 	const double min_gamma = 2.1;
 	const double max_gamma = 3.9;
-	// количество точек
+	*/
+
+	const double min_kappa = 2.5;
+	const double max_kappa = 4.0;
+
+
+	// Г¬ГЁГ­ГЁГ¬Г Г«ГјГ­Г Гї Г·Г Г±ГІГ®ГІГ 
+	const double min_gamma = 2.9;
+	const double max_gamma = 4.4;
+	// РєРѕР»РёС‡РµСЃС‚РІРѕ С‚РѕС‡РµРє
 	const size_t points_x = 30;
-	// значения частоты
+	// Р·РЅР°С‡РµРЅРёСЏ С‡Р°СЃС‚РѕС‚С‹
 	const double h_x = 1.0 / points_x;
 	const std::vector<double> points_kappa = create_points_vector(points_k, min_kappa, max_kappa);
 	const std::vector<double> points_gamma = create_points_vector(points_k, min_gamma, max_gamma);
 	const std::vector<double> vv = create_points_vector(points_x, 0, 1);
 	
-	// задаём параметры
+	// Р·Р°РґР°С‘Рј РїР°СЂР°РјРµС‚СЂС‹
 	Parameters::points = vv;
 	Parameters::piecewise_linear_params = { points_x + 1, {1.0, 1.0} };
 	Parameters::const_params = { 1.0, 1.0 };
@@ -214,16 +227,16 @@ int main()
 		//[](auto x) {return 2.0 - (x - 1) * (x - 1); },
 		//[](auto x) {return 1.0 + exp(5 * (x - 1)); }
 		// 2
-		//[](auto x) {return 2.0 - x * x; },
-		//[](auto x) {return 1.0 + exp(-4 * x + 0.02); }
+		[](auto x) {return 2.0 - x * x; },
+		[](auto x) {return 1.0 + exp(-4 * x + 0.02); }
 		// 3
-		[](auto x) {return 1.0 + sin(pi * x); },
-		[](auto x) {return 4 * x * x - 4 * x + 2; }
+		//[](auto x) {return 1.0 + sin(pi * x); },
+		//[](auto x) {return 4 * x * x - 4 * x + 2; }
 	};
 	std::vector<double> exact_solution_mu = fill_up_the_vector(Parameters::smooth_params[0], vv);//(points_x);
 	std::vector<double> exact_solution_rho = fill_up_the_vector(Parameters::smooth_params[1], vv);
 
-	// краевые задачи
+	// РєСЂР°РµРІС‹Рµ Р·Р°РґР°С‡Рё
 	const system_evaluation longitidinal_evaluation = longitudinal(
 		[](double x) { return Parameters::evaluate(x, 0); },
 		[](double x) { return Parameters::evaluate(x, 1); });
@@ -235,10 +248,21 @@ int main()
 	std::vector<double> observed(longitudinal_observed);
 	observed.insert(observed.end(), flexural_observed.begin(), flexural_observed.end());
 
-	// 1.2 Эталонное поле перемещений
+
+	/*
+0.98776
+0.15924
+0.48504
+-0.15956
+runtime = 48.57500
+796000
+*/
+	// 1.2 Р­С‚Р°Р»РѕРЅРЅРѕРµ РїРѕР»Рµ РїРµСЂРµРјРµС‰РµРЅРёР№
 	Parameters::kind = FIRST;
-	auto e = [](double x) {return 1.5; };
-	auto rho = [](double x) {return 1.5; };
+	auto e = lagrange({ 0.98776, 0.15924 });
+	auto rho = lagrange({ 0.48504, -0.15956 });
+	//auto e = lagrange({ 0.15946, 0.78509, 0.70452 }); //[](double x) {return /*1.5*/ };
+	//auto rho = lagrange({ 0.10002,-0.06246,0.96997 }); // [](double x) {return /*1.5*/ };
 	for (size_t i = 0; i < points_x; i++)
 	{
 		Parameters::piecewise_linear_params[i][0] = e(vv[i]);
@@ -254,9 +278,9 @@ int main()
 	auto right_part = observed - etalon;
 
 
-	// 2. Создаём матрицу
-	// 2.1 Лямбда-выражения для создания ядер
-	// продольные колебания
+	// 2. РЎРѕР·РґР°С‘Рј РјР°С‚СЂРёС†Сѓ
+	// 2.1 Р›СЏРјР±РґР°-РІС‹СЂР°Р¶РµРЅРёСЏ РґР»СЏ СЃРѕР·РґР°РЅРёСЏ СЏРґРµСЂ
+	// РїСЂРѕРґРѕР»СЊРЅС‹Рµ РєРѕР»РµР±Р°РЅРёСЏ
 	auto mu_reconstruct_longitudinal = [=](double kappa, const std::vector<double>& v, size_t idx)
 	{return  -h_x * v[1] * v[1] / Parameters::piecewise_linear_params[idx][0]
 		/ Parameters::piecewise_linear_params[idx][0]; };
