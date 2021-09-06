@@ -1,1 +1,17 @@
-﻿  LSQR_C++.vcxproj -> C:\Users\Сектор ОЗ\source\repos\pavelUglich\myRepository\x64\Release\LSQR_C++.exe
+﻿  boundary_value_problem.cpp
+  IterativeProcess.cpp
+  lsqr.cpp
+  MatrixSystem.cpp
+  OdeSolver.cpp
+  Parameters.cpp
+  plots.cpp
+  Source.cpp
+  Stabilizer.cpp
+  system_evaluation.cpp
+  vector_ops.cpp
+  VoyevodinMethod.cpp
+  Создание кода
+  Previous IPDB was built with incompatible compiler, fall back to full compilation.
+  All 1482 functions were compiled because no usable IPDB/IOBJ from previous compilation was found.
+  Создание кода завершено
+  LSQR_C++.vcxproj -> C:\Users\Сектор ОЗ\source\repos\pavelUglich\myRepository\x64\Release\LSQR_C++.exe

@@ -193,7 +193,18 @@ int main()
 	Parameters::kind = FIRST;
 
 	const size_t points_k = 10;
-	/*
+
+	
+	//const double min_kappa = 0;
+	//const double max_kappa = 1.2;
+
+
+	// минимальная частота
+	//const double min_gamma = 0;
+	//const double max_gamma = 1.2;
+	
+
+	
 	const double min_kappa = 2.1;
 	const double max_kappa = 3.9;
 
@@ -201,15 +212,15 @@ int main()
 	// минимальная частота
 	const double min_gamma = 2.1;
 	const double max_gamma = 3.9;
-	*/
+	
 
-	const double min_kappa = 2.5;
-	const double max_kappa = 4.0;
+	//const double min_kappa = 2.5;
+	//const double max_kappa = 4.0;
 
 
 	// ìèíèìàëüíàÿ ÷àñòîòà
-	const double min_gamma = 2.9;
-	const double max_gamma = 4.4;
+	//const double min_gamma = 2.9;
+	//const double max_gamma = 4.4;
 	// количество точек
 	const size_t points_x = 30;
 	// значения частоты
@@ -250,20 +261,25 @@ int main()
 
 
 	/*
-0.98776
-0.15924
-0.48504
--0.15956
-runtime = 48.57500
-796000
+0.84616
+0.61798
+0.31200
+-0.07518
+
+0.26017
+0.99835
+0.32335
+0.42953
+0.83252
+0.54754
 */
 	// 1.2 Эталонное поле перемещений
 	Parameters::kind = FIRST;
-	auto e = lagrange({ 0.98776, 0.15924 });
-	auto rho = lagrange({ 0.48504, -0.15956 });
-	//auto e = lagrange({ 0.15946, 0.78509, 0.70452 }); //[](double x) {return /*1.5*/ };
+	auto e = lagrange({ 0.84616, 0.61798 });
+	auto rho = lagrange({ 0.31200, -0.07518 });
+	//auto e = lagrange({ 0.26017, 0.99835, 0.32335 }); //[](double x) {return /*1.5*/ };
 	//auto rho = lagrange({ 0.10002,-0.06246,0.96997 }); // [](double x) {return /*1.5*/ };
-	for (size_t i = 0; i < points_x; i++)
+	for (size_t i = 0; i <= points_x; i++)
 	{
 		Parameters::piecewise_linear_params[i][0] = e(vv[i]);
 		Parameters::piecewise_linear_params[i][1] = rho(vv[i]);
@@ -358,9 +374,9 @@ runtime = 48.57500
 		//sol = voyevodin_method.solution();
 		++iter;
 	}
-	std::vector<double> mu_reconstrucred(points_x);
-	std::vector<double> rho_reconstrucred(points_x);
-	for (size_t i = 0; i < points_x; i++)
+	std::vector<double> mu_reconstrucred(points_x + 1);
+	std::vector<double> rho_reconstrucred(points_x + 1);
+	for (size_t i = 0; i <= points_x; i++)
 	{
 		mu_reconstrucred[i] = Parameters::piecewise_linear_params[i][0];
 		rho_reconstrucred[i] = Parameters::piecewise_linear_params[i][1];
